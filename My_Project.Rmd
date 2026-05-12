@@ -1,0 +1,144 @@
+---
+title: "My Senior Project"
+author: "Abdullah Alshubaily G01473874"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+
+```{r}
+library(tidyverse)
+
+understat_per_game <- read_csv("/Users/abdullah/Downloads/archive (5)/understat_per_game.csv")
+
+glimpse(understat_per_game)
+```
+
+## Simple Linear Regression 
+
+```{r}
+model1 <- lm(scored ~ npxGD, data = understat_per_game)
+summary(model1)
+```
+
+## Multiple Linear Regression
+
+```{r}
+model2 <- lm(scored ~ xG_diff + xGA_diff + npxGD, data = understat_per_game)
+summary(model2)
+```
+
+## Polynomial Regression
+
+```{r}
+model3 <- lm(scored ~ xG_diff + I(xG_diff^2), data = understat_per_game)
+summary(model3)
+```
+
+## Linear Regression with Pressing Variables
+
+```{r}
+model4 <- lm(scored ~ xG_diff + ppda_coef + oppda_coef, data = understat_per_game)
+summary(model4)
+```
+
+## Full Multiple Regression
+
+```{r}
+model5 <- lm(scored ~ xG_diff + xGA_diff + npxGD + ppda_coef + oppda_coef +
+               ppda_att + ppda_def + oppda_att + oppda_def,
+             data = understat_per_game)
+summary(model5)
+```
+
+## Log-Transformed Linear Model
+
+```{r}
+model6 <- lm(log(scored + 1) ~ xG_diff + xGA_diff + npxGD,
+             data = understat_per_game)
+summary(model6)
+```
+
+## Poisson Regression
+
+```{r}
+model7 <- glm(scored ~ xG_diff + xGA_diff + npxGD,
+              family = poisson,
+              data = understat_per_game)
+summary(model7)
+```
+
+## Negative Binomial Regression
+
+```{r}
+library(MASS)
+
+library(MASS)
+
+model8 <- glm.nb(scored ~ xG_diff + xGA_diff + npxGD,
+                 data = understat_per_game,
+                 control = glm.control(maxit = 100))
+summary(model8)
+```
+
+## Ridge Regression
+
+```{r}
+library(glmnet)
+
+x_ridge <- model.matrix(scored ~ xG_diff + xGA_diff + npxGD + ppda_coef +
+                          oppda_coef + ppda_att + ppda_def + oppda_att + oppda_def,
+                        data = understat_per_game)[, -1]
+
+y_ridge <- understat_per_game$scored
+
+model9 <- cv.glmnet(x_ridge, y_ridge, alpha = 0)
+plot(model9)
+coef(model9, s = "lambda.min")
+```
+
+## LASSO Regression
+
+```{r}
+model10 <- cv.glmnet(x_ridge, y_ridge, alpha = 1)
+plot(model10)
+
+coef(model10, s = "lambda.min")
+```
+
+Box Plot
+
+```{r}
+ggplot(understat_per_game, aes(x = result, y = xG)) +
+  geom_boxplot() +
+  labs(title = "xG by Match Result",
+       x = "Result (Win/Draw/Loss)",
+       y = "xG")
+```
+
+```{r}
+ggplot(understat_per_game, aes(x = h_a, y = scored)) +
+  geom_boxplot() +
+  labs(title = "Goals Scored: Home vs Away",
+       x = "Home/Away",
+       y = "Goals")
+```
+
+ScatterPlot
+
+```{r}
+ggplot(understat_per_game, aes(x = xG, y = scored)) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  geom_smooth(method = "glm", method.args = list(family = "poisson"), se = FALSE, color = "red") +
+  labs(title = "Goals Scored vs Expected Goals (xG)",
+       x = "Expected Goals (xG)",
+       y = "Goals Scored") +
+  theme_minimal() +
+  geom_abline(intercept = 0, slope = 1, linetype =2, color = "black")
+```
+
+This figure shows two different models, predicting goals scored from expected goals. The blue is linear regression and red Poisson regression. When expected goals is less than 3, the two models will give the same prediction. When expected goals is greater than 3, poisson gives you a higher regression, and the dashe line is y=x line (For comparison).
+
+
+
